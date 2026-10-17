@@ -1,0 +1,33 @@
+# Python environment
+venv/
+env/
+.venv/
+ENV/
+
+# Python cache
+__pycache__/
+*.py[cod]
+
+# Environment variables and secrets
+.env
+.env.*
+!.env.example
+
+# Databases
+*.sqlite3
+*.db
+
+# Temporary files
+~$*
+*.tmp
+
+# IDE files
+.vscode/
+.idea/
+
+# Logs
+*.log
+
+# OS files
+Thumbs.db
+.DS_Store

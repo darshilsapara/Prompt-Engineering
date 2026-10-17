@@ -1,0 +1,361 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>NeonRacer — Motor Racing Game</title>
+  <meta name="description" content="A neon-themed 2D motor racing car dodging game. Avoid opponent cars, collect coins and fuel, survive as long as you can!" />
+  <meta name="keywords" content="racing game, car dodging, neon game, 2D browser game, prompt engineering" />
+
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Rajdhani:wght@400;600;700&display=swap" rel="stylesheet" />
+
+  <!-- Game CSS -->
+  <link rel="stylesheet" href="{% static 'css/style.css' %}" />
+
+  <!-- Vue 3 CDN (Petite-Vue for this size, or full Vue 3) -->
+  <script src="https://unpkg.com/vue@3/dist/vue.global.prod.js"></script>
+</head>
+<body>
+
+{% verbatim %}
+<div id="app">
+  <!-- ══ Game Wrapper ══════════════════════════════════════════ -->
+  <div class="game-wrapper">
+
+    <!-- HUD Bar (live stats) -->
+    <div class="hud-bar" v-if="gameState === 'playing'">
+      <div class="hud-item">
+        <span class="hud-label">Score</span>
+        <span class="hud-value hud-score">{{ score.toLocaleString() }}</span>
+      </div>
+
+      <div class="hud-item">
+        <span class="hud-label">Level</span>
+        <span class="hud-value hud-level">{{ level }}</span>
+      </div>
+
+      <div class="fuel-wrap">
+        <span class="hud-label">Fuel</span>
+        <div class="fuel-bar-outer">
+          <div class="fuel-bar-inner"
+               :style="{ width: fuel + '%', background: fuelGradient }">
+          </div>
+        </div>
+      </div>
+
+      <div class="hud-item">
+        <span class="hud-label">Coins</span>
+        <span class="hud-value hud-coins">🪙 {{ coins }}</span>
+      </div>
+
+      <div class="hud-item">
+        <span class="hud-label">Speed</span>
+        <span class="hud-value hud-speed">{{ speed }}<small style="font-size:9px"> km/h</small></span>
+      </div>
+    </div>
+
+    <!-- Canvas -->
+    <div style="position:relative;">
+      <canvas id="gameCanvas" ref="canvas" width="400" height="600"></canvas>
+
+      <!-- Crash flash overlay -->
+      <div class="crash-flash" v-if="showCrashFlash" key="flash"></div>
+
+      <!-- ── START SCREEN ────────────────────────────────────────── -->
+      <div class="overlay" v-if="gameState === 'start'" id="start-screen">
+        <div class="overlay-title" style="color: var(--neon-green);">
+          🏎️ NEON<br>RACER
+        </div>
+        <div class="overlay-subtitle">Survive the neon highway.<br>Dodge, collect, and dominate.</div>
+
+        <div class="start-features">
+          <span class="feature-tag">⛽ Fuel System</span>
+          <span class="feature-tag">🪙 Coins</span>
+          <span class="feature-tag">🚗 5 Car Types</span>
+          <span class="feature-tag">📈 Auto Levels</span>
+          <span class="feature-tag">🏆 High Scores</span>
+          <span class="feature-tag">💥 Particles</span>
+        </div>
+
+        <div class="divider"></div>
+
+        <div class="name-input-wrap">
+          <span class="name-input-label">Your Racer Name</span>
+          <input id="player-name-input"
+                 class="name-input"
+                 v-model="playerName"
+                 maxlength="20"
+                 placeholder="Anonymous"
+                 @keyup.enter="startGame" />
+        </div>
+
+        <button id="start-btn" class="btn btn-primary" @click="startGame">
+          🚦 START RACE
+        </button>
+
+        <div class="controls-hint">
+          <span class="key-badge">←</span> Move Left &nbsp;|&nbsp;
+          <span class="key-badge">→</span> Move Right
+        </div>
+
+        <!-- Leaderboard on start screen -->
+        <div class="divider"></div>
+        <div class="leaderboard" v-if="leaderboard.length > 0">
+          <div class="lb-title">🏆 Top Racers</div>
+          <div v-for="(entry, idx) in leaderboard.slice(0,5)"
+               :key="entry.id"
+               class="lb-row"
+               :class="{ 'lb-top-1': idx===0, 'lb-top-2': idx===1, 'lb-top-3': idx===2 }">
+            <span class="lb-rank">{{ idx === 0 ? '🥇' : idx === 1 ? '🥈' : idx === 2 ? '🥉' : '#' + (idx+1) }}</span>
+            <span class="lb-name">{{ entry.player_name }}</span>
+            <span class="lb-score">{{ entry.score.toLocaleString() }}</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- ── GAME OVER SCREEN ────────────────────────────────────── -->
+      <div class="overlay" v-if="gameState === 'gameover'" id="gameover-screen">
+        <div class="overlay-title" style="color: var(--neon-red);">
+          GAME<br>OVER
+        </div>
+
+        <div class="overlay-score-big">{{ finalStats.score.toLocaleString() }}</div>
+        <div class="overlay-subtitle">Final Score</div>
+
+        <div class="stats-grid">
+          <div class="stat-cell">
+            <span class="stat-val" style="color:var(--neon-blue);">{{ finalStats.level }}</span>
+            <span class="stat-lbl">Level Reached</span>
+          </div>
+          <div class="stat-cell">
+            <span class="stat-val" style="color:var(--neon-orange);">{{ finalStats.carsDodged }}</span>
+            <span class="stat-lbl">Cars Dodged</span>
+          </div>
+          <div class="stat-cell">
+            <span class="stat-val" style="color:var(--neon-yellow);">{{ finalStats.coins }}</span>
+            <span class="stat-lbl">Coins Collected</span>
+          </div>
+          <div class="stat-cell">
+            <span class="stat-val" style="color:var(--neon-green);">{{ isNewHighScore ? '✨ YES' : 'NO' }}</span>
+            <span class="stat-lbl">New High Score</span>
+          </div>
+        </div>
+
+        <div class="divider"></div>
+
+        <div class="name-input-wrap">
+          <span class="name-input-label">Save As</span>
+          <input id="gameover-name-input"
+                 class="name-input"
+                 v-model="playerName"
+                 maxlength="20"
+                 placeholder="Anonymous" />
+        </div>
+
+        <div style="display:flex; gap:12px; flex-wrap:wrap; justify-content:center;">
+          <button id="restart-btn"   class="btn btn-primary"   @click="startGame">🔄 RACE AGAIN</button>
+          <button id="leaderboard-btn" class="btn btn-secondary" @click="showLeaderboard">🏆 LEADERBOARD</button>
+        </div>
+
+        <button id="home-btn" class="btn btn-ghost" @click="goHome">← Main Menu</button>
+      </div>
+
+      <!-- ── LEADERBOARD SCREEN ──────────────────────────────────── -->
+      <div class="overlay" v-if="gameState === 'leaderboard'" id="leaderboard-screen">
+        <div class="overlay-title" style="color: var(--neon-yellow);">🏆 LEADERBOARD</div>
+
+        <div class="leaderboard" style="max-height: 360px; overflow-y: auto; width:100%;">
+          <div v-if="leaderboard.length === 0" style="text-align:center; color:var(--text-muted); padding:20px;">
+            No scores yet. Be the first!
+          </div>
+          <div v-for="(entry, idx) in leaderboard"
+               :key="entry.id"
+               class="lb-row"
+               :class="{ 'lb-top-1': idx===0, 'lb-top-2': idx===1, 'lb-top-3': idx===2 }">
+            <span class="lb-rank">{{ idx === 0 ? '🥇' : idx === 1 ? '🥈' : idx === 2 ? '🥉' : '#' + (idx+1) }}</span>
+            <span class="lb-name">{{ entry.player_name }}</span>
+            <div style="display:flex; flex-direction:column; align-items:flex-end; gap:1px;">
+              <span class="lb-score">{{ entry.score.toLocaleString() }}</span>
+              <span style="font-size:10px; color:var(--text-muted);">Lvl {{ entry.level_reached }} · 🪙{{ entry.coins_collected }}</span>
+            </div>
+          </div>
+        </div>
+
+        <div style="display:flex; gap:12px; flex-wrap:wrap; justify-content:center;">
+          <button id="lb-race-btn" class="btn btn-primary"   @click="startGame">🔄 RACE AGAIN</button>
+          <button id="lb-home-btn" class="btn btn-ghost"     @click="goHome">← Menu</button>
+        </div>
+      </div>
+
+    </div><!-- /canvas wrapper -->
+
+    <!-- Mobile Controls -->
+    <div class="hud-bar" v-if="gameState === 'playing'" style="justify-content:space-around;">
+      <button id="mobile-left-btn"
+              class="btn btn-secondary"
+              style="padding:10px 36px; font-size:18px;"
+              @touchstart.prevent="mobileLeft"
+              @mousedown="mobileLeft">◀ LEFT</button>
+      <div class="controls-hint">
+        <span class="key-badge">←</span> <span class="key-badge">→</span>
+      </div>
+      <button id="mobile-right-btn"
+              class="btn btn-secondary"
+              style="padding:10px 36px; font-size:18px;"
+              @touchstart.prevent="mobileRight"
+              @mousedown="mobileRight">RIGHT ▶</button>
+    </div>
+
+  </div><!-- /game-wrapper -->
+</div><!-- /#app -->
+{% endverbatim %}
+
+<!-- Game Engine -->
+<script src="{% static 'js/game.js' %}"></script>
+
+<!-- Vue App -->
+<script>
+const { createApp, ref, computed, onMounted, onUnmounted, nextTick } = Vue;
+
+createApp({
+  setup() {
+    // ── Reactive State ────────────────────────────────────────
+    const gameState     = ref('start');   // 'start' | 'playing' | 'gameover' | 'leaderboard'
+    const playerName    = ref('');
+    const score         = ref(0);
+    const level         = ref(1);
+    const fuel          = ref(100);
+    const coins         = ref(0);
+    const speed         = ref(0);
+    const leaderboard   = ref([]);
+    const finalStats    = ref({ score: 0, level: 1, carsDodged: 0, coins: 0 });
+    const isNewHighScore = ref(false);
+    const showCrashFlash = ref(false);
+
+    const canvas = ref(null);
+    let engine   = null;
+
+    // ── Fuel colour gradient helper ──────────────────────────
+    const fuelGradient = computed(() => {
+      const f = fuel.value;
+      if (f > 60) return 'linear-gradient(90deg,#00c97a,#00ff88)';
+      if (f > 30) return 'linear-gradient(90deg,#cc9900,#ffdd00)';
+      return 'linear-gradient(90deg,#cc1144,#ff3366)';
+    });
+
+    // ── API helpers ──────────────────────────────────────────
+    async function fetchLeaderboard() {
+      try {
+        const res = await fetch('/api/scores/');
+        const data = await res.json();
+        leaderboard.value = data.scores || [];
+      } catch (e) {
+        console.warn('Could not fetch leaderboard:', e);
+      }
+    }
+
+    async function submitScore(stats) {
+      try {
+        const res = await fetch('/api/scores/submit/', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            player_name:    playerName.value || 'Anonymous',
+            score:          stats.score,
+            level_reached:  stats.level,
+            cars_dodged:    stats.carsDodged,
+            coins_collected: stats.coins,
+          }),
+        });
+        const data = await res.json();
+        return data.success;
+      } catch (e) {
+        console.warn('Could not submit score:', e);
+        return false;
+      }
+    }
+
+    // ── Game callbacks ───────────────────────────────────────
+    const gameCallbacks = {
+      onScore:    (v) => { score.value   = v; },
+      onFuel:     (v) => { fuel.value    = Math.round(v); },
+      onLevel:    (v) => { level.value   = v; },
+      onCoins:    (v) => { coins.value   = v; },
+      onSpeed:    (v) => { speed.value   = v; },
+      onGameOver: async (stats) => {
+        finalStats.value = stats;
+
+        // Check if new high score
+        const topScore = leaderboard.value.length > 0
+          ? leaderboard.value[0].score : 0;
+        isNewHighScore.value = stats.score > topScore;
+
+        // Crash flash
+        showCrashFlash.value = true;
+        setTimeout(() => { showCrashFlash.value = false; }, 600);
+
+        // Submit to backend
+        await submitScore(stats);
+        await fetchLeaderboard();
+
+        gameState.value = 'gameover';
+      },
+    };
+
+    // ── Game controls ────────────────────────────────────────
+    async function startGame() {
+      score.value  = 0;
+      level.value  = 1;
+      fuel.value   = 100;
+      coins.value  = 0;
+      speed.value  = 0;
+
+      gameState.value = 'playing';
+
+      await nextTick();
+
+      if (engine) engine.destroy();
+      engine = new GameEngine(canvas.value, gameCallbacks);
+      engine.start();
+    }
+
+    function showLeaderboard() {
+      if (engine) engine.stop();
+      gameState.value = 'leaderboard';
+      fetchLeaderboard();
+    }
+
+    function goHome() {
+      if (engine) engine.stop();
+      gameState.value = 'start';
+      fetchLeaderboard();
+    }
+
+    function mobileLeft()  { if (engine) engine.moveLeft();  }
+    function mobileRight() { if (engine) engine.moveRight(); }
+
+    // ── Lifecycle ────────────────────────────────────────────
+    onMounted(() => {
+      fetchLeaderboard();
+    });
+
+    onUnmounted(() => {
+      if (engine) engine.destroy();
+    });
+
+    return {
+      gameState, playerName, score, level, fuel, coins, speed,
+      leaderboard, finalStats, isNewHighScore, showCrashFlash,
+      fuelGradient, canvas,
+      startGame, showLeaderboard, goHome, mobileLeft, mobileRight,
+    };
+  },
+}).mount('#app');
+</script>
+
+</body>
+</html>

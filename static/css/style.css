@@ -1,0 +1,416 @@
+/* ============================================================
+   Motor Racing Game — Global Stylesheet
+   Design: Neon Dark Theme | Glassmorphism HUD
+   ============================================================ */
+
+@import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Rajdhani:wght@400;600;700&display=swap');
+
+/* ── CSS Custom Properties ─────────────────────────────────── */
+:root {
+  --neon-green:   #00ff88;
+  --neon-blue:    #00cfff;
+  --neon-red:     #ff3366;
+  --neon-yellow:  #ffdd00;
+  --neon-orange:  #ff8c00;
+  --neon-purple:  #a855f7;
+  --bg-dark:      #050810;
+  --bg-panel:     rgba(10, 16, 32, 0.85);
+  --glass-border: rgba(0, 207, 255, 0.25);
+  --text-primary: #e0f4ff;
+  --text-muted:   #7090b0;
+  --road-color:   #1a1e2e;
+  --lane-color:   #2a2e3e;
+  --shadow-neon:  0 0 20px rgba(0, 207, 255, 0.4);
+  --font-hud:     'Orbitron', monospace;
+  --font-ui:      'Rajdhani', sans-serif;
+}
+
+/* ── Reset & Base ───────────────────────────────────────────── */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+html, body {
+  width: 100%; height: 100%;
+  background: var(--bg-dark);
+  color: var(--text-primary);
+  font-family: var(--font-ui);
+  overflow: hidden;
+  user-select: none;
+}
+
+/* ── App Shell (Vue mount point) ────────────────────────────── */
+#app {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100vw;
+  height: 100vh;
+  background:
+    radial-gradient(ellipse at 20% 50%, rgba(0,207,255,0.06) 0%, transparent 60%),
+    radial-gradient(ellipse at 80% 20%, rgba(168,85,247,0.06) 0%, transparent 60%),
+    var(--bg-dark);
+}
+
+/* ── Game Wrapper ───────────────────────────────────────────── */
+.game-wrapper {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+}
+
+/* ── Canvas ─────────────────────────────────────────────────── */
+#gameCanvas {
+  display: block;
+  border-radius: 12px;
+  border: 1px solid var(--glass-border);
+  box-shadow:
+    0 0 0 1px rgba(0,207,255,0.1),
+    0 0 40px rgba(0,207,255,0.15),
+    0 20px 60px rgba(0,0,0,0.7);
+}
+
+/* ── HUD Bar (above canvas) ─────────────────────────────────── */
+.hud-bar {
+  width: 100%;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 16px;
+  background: var(--bg-panel);
+  border: 1px solid var(--glass-border);
+  border-radius: 10px;
+  backdrop-filter: blur(12px);
+  box-shadow: var(--shadow-neon);
+  font-family: var(--font-hud);
+  font-size: 13px;
+  gap: 12px;
+}
+
+.hud-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+}
+
+.hud-label {
+  font-size: 9px;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
+.hud-value {
+  font-size: 18px;
+  font-weight: 700;
+  line-height: 1;
+  text-shadow: 0 0 10px currentColor;
+}
+
+.hud-score  { color: var(--neon-green); }
+.hud-level  { color: var(--neon-blue);  }
+.hud-coins  { color: var(--neon-yellow);}
+.hud-speed  { color: var(--neon-orange);}
+
+/* ── Fuel Bar ───────────────────────────────────────────────── */
+.fuel-wrap {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+  min-width: 80px;
+}
+
+.fuel-bar-outer {
+  width: 80px;
+  height: 10px;
+  background: rgba(255,255,255,0.08);
+  border-radius: 5px;
+  overflow: hidden;
+  border: 1px solid rgba(255,140,0,0.3);
+}
+
+.fuel-bar-inner {
+  height: 100%;
+  border-radius: 5px;
+  transition: width 0.3s ease, background 0.5s ease;
+  box-shadow: 0 0 8px var(--neon-orange);
+}
+
+/* ── Controls hint ──────────────────────────────────────────── */
+.controls-hint {
+  display: flex;
+  gap: 8px;
+  font-family: var(--font-ui);
+  font-size: 12px;
+  color: var(--text-muted);
+  align-items: center;
+}
+
+.key-badge {
+  background: rgba(0,207,255,0.12);
+  border: 1px solid rgba(0,207,255,0.3);
+  border-radius: 4px;
+  padding: 2px 6px;
+  font-family: var(--font-hud);
+  font-size: 10px;
+  color: var(--neon-blue);
+}
+
+/* ── Overlay Screens (start / game-over / leaderboard) ──────── */
+.overlay {
+  position: absolute;
+  inset: 0;
+  border-radius: 12px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  background: rgba(5,8,16,0.92);
+  backdrop-filter: blur(8px);
+  padding: 32px;
+  gap: 20px;
+  z-index: 100;
+  animation: fadeIn 0.3s ease;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: scale(0.97); }
+  to   { opacity: 1; transform: scale(1); }
+}
+
+.overlay-title {
+  font-family: var(--font-hud);
+  font-size: 36px;
+  font-weight: 900;
+  text-align: center;
+  letter-spacing: 3px;
+  text-transform: uppercase;
+}
+
+.overlay-subtitle {
+  font-family: var(--font-ui);
+  font-size: 16px;
+  color: var(--text-muted);
+  text-align: center;
+  letter-spacing: 1px;
+}
+
+.overlay-score-big {
+  font-family: var(--font-hud);
+  font-size: 64px;
+  font-weight: 900;
+  color: var(--neon-green);
+  text-shadow: 0 0 30px var(--neon-green), 0 0 60px rgba(0,255,136,0.3);
+  line-height: 1;
+}
+
+.stats-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px 24px;
+  text-align: center;
+}
+
+.stat-cell {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.stat-val {
+  font-family: var(--font-hud);
+  font-size: 22px;
+  font-weight: 700;
+}
+
+.stat-lbl {
+  font-size: 10px;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
+/* ── Buttons ─────────────────────────────────────────────────── */
+.btn {
+  font-family: var(--font-hud);
+  font-size: 14px;
+  font-weight: 700;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  border: none;
+  border-radius: 8px;
+  padding: 12px 32px;
+  cursor: pointer;
+  transition: transform 0.15s ease, box-shadow 0.15s ease, filter 0.15s ease;
+  position: relative;
+  overflow: hidden;
+}
+
+.btn::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(135deg, rgba(255,255,255,0.12) 0%, transparent 60%);
+  pointer-events: none;
+}
+
+.btn:hover  { transform: translateY(-2px); filter: brightness(1.15); }
+.btn:active { transform: translateY(0px);  filter: brightness(0.95); }
+
+.btn-primary {
+  background: linear-gradient(135deg, #00c97a, #00ff88);
+  color: #050810;
+  box-shadow: 0 4px 20px rgba(0,255,136,0.4), 0 0 0 1px rgba(0,255,136,0.3);
+}
+
+.btn-secondary {
+  background: linear-gradient(135deg, #0090cc, #00cfff);
+  color: #050810;
+  box-shadow: 0 4px 20px rgba(0,207,255,0.35), 0 0 0 1px rgba(0,207,255,0.3);
+}
+
+.btn-danger {
+  background: linear-gradient(135deg, #cc1144, #ff3366);
+  color: #fff;
+  box-shadow: 0 4px 20px rgba(255,51,102,0.4);
+}
+
+.btn-ghost {
+  background: rgba(255,255,255,0.06);
+  color: var(--text-muted);
+  border: 1px solid rgba(255,255,255,0.12);
+  box-shadow: none;
+  font-size: 12px;
+  padding: 8px 20px;
+}
+
+/* ── Name Input ─────────────────────────────────────────────── */
+.name-input-wrap {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+  max-width: 260px;
+}
+
+.name-input-label {
+  font-size: 10px;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  font-family: var(--font-hud);
+}
+
+.name-input {
+  width: 100%;
+  background: rgba(0,207,255,0.06);
+  border: 1px solid var(--glass-border);
+  border-radius: 6px;
+  padding: 10px 14px;
+  font-family: var(--font-hud);
+  font-size: 16px;
+  color: var(--neon-blue);
+  text-align: center;
+  outline: none;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.name-input:focus {
+  border-color: var(--neon-blue);
+  box-shadow: 0 0 12px rgba(0,207,255,0.3);
+}
+
+/* ── Leaderboard ─────────────────────────────────────────────── */
+.leaderboard {
+  width: 100%;
+  max-width: 340px;
+}
+
+.lb-title {
+  font-family: var(--font-hud);
+  font-size: 11px;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  color: var(--neon-yellow);
+  text-align: center;
+  margin-bottom: 10px;
+  text-shadow: 0 0 8px var(--neon-yellow);
+}
+
+.lb-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 6px 10px;
+  border-radius: 6px;
+  font-family: var(--font-ui);
+  font-size: 14px;
+  transition: background 0.2s;
+}
+
+.lb-row:nth-child(odd)  { background: rgba(255,255,255,0.03); }
+.lb-row:nth-child(even) { background: rgba(0,207,255,0.04);   }
+
+.lb-row.lb-top-1 .lb-rank { color: #ffd700; text-shadow: 0 0 8px #ffd700; }
+.lb-row.lb-top-2 .lb-rank { color: #c0c0c0; text-shadow: 0 0 6px #c0c0c0; }
+.lb-row.lb-top-3 .lb-rank { color: #cd7f32; text-shadow: 0 0 6px #cd7f32; }
+
+.lb-rank  { font-family: var(--font-hud); font-size: 12px; min-width: 24px; }
+.lb-name  { flex: 1; }
+.lb-score { font-family: var(--font-hud); font-weight: 700; color: var(--neon-green); }
+
+/* ── Start Screen Specific ───────────────────────────────────── */
+.start-features {
+  display: flex;
+  gap: 16px;
+  flex-wrap: wrap;
+  justify-content: center;
+  max-width: 320px;
+}
+
+.feature-tag {
+  background: rgba(168,85,247,0.12);
+  border: 1px solid rgba(168,85,247,0.3);
+  border-radius: 4px;
+  padding: 4px 10px;
+  font-size: 11px;
+  color: var(--neon-purple);
+  letter-spacing: 0.5px;
+}
+
+/* ── Crash Flash ─────────────────────────────────────────────── */
+.crash-flash {
+  position: absolute;
+  inset: 0;
+  border-radius: 12px;
+  background: rgba(255,51,102,0.35);
+  pointer-events: none;
+  z-index: 99;
+  animation: crashFlash 0.5s ease forwards;
+}
+
+@keyframes crashFlash {
+  0%   { opacity: 1; }
+  100% { opacity: 0; }
+}
+
+/* ── Divider ─────────────────────────────────────────────────── */
+.divider {
+  width: 80%;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, var(--glass-border), transparent);
+}
+
+/* ── Scrollbar ──────────────────────────────────────────────── */
+::-webkit-scrollbar { width: 4px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--glass-border); border-radius: 2px; }
+
+/* ── Responsive tweaks ───────────────────────────────────────── */
+@media (max-height: 700px) {
+  .overlay-score-big { font-size: 48px; }
+  .overlay-title { font-size: 28px; }
+}
